@@ -1,0 +1,138 @@
+<apex:component controller="VFPageComponentController" allowDml="true" >
+    
+    <apex:attribute name="object"  type="String" description="Selected Object form vf page." assignTo="{!obj}"/>
+    <apex:attribute name="fields" type="String[]" description="Selected object ke selected field list." assignTo="{!objfields}" />
+    <!--   ====  When java jsfunction is invoke == than action is perform & custom controller queryMethod is invoked ====  ---> 
+    
+    <apex:form id="fid">
+        <apex:actionFunction name="jsfunction" action="{!queryMethod}" reRender="fid"/>
+        
+        <!-- ======================  Set A to Z Other & All Sorting line =================== -->
+        
+        
+        <div align="left">
+            <apex:commandButton value="New Record" action="{!URLFOR($Action[obj].New)}" />
+            <apex:commandButton value="Delete Selected" action="{!deleteSelectedRecord}" style="postion:relative; left:10px"/>
+            <apex:commandButton value="Download CSV" style="postion:relative; left:10px"/>
+        </div>
+        <div align="right">
+            <apex:panelGrid >
+                <apex:repeat value="{!alphabet}" var="alph">
+                    <apex:commandLink value="{!alph} | " action="{!alphaSearch}" reRender="tableBlock">
+                        <apex:param name="a" value="{!alph}" assignTo="{!alphaSearchValue}"/>
+                    </apex:commandLink>
+                </apex:repeat>
+            </apex:panelGrid>
+        </div>
+        
+        <!-- =========== Start the Table Block Section ===========      -->
+        
+        <apex:pageBlock id="aa">
+            <apex:outputPanel layout="block" style="overflow:auto; height:260px; width:1000px;margin: 0px"> 
+                <apex:pageBlockTable value="{!wrapperRecordList}" var="record_row" id="tableBlock" >
+                    <apex:column width="10px">
+                        <apex:facet name="header">
+                            <apex:inputCheckbox value="{!masterCheckbox}" onclick="master()" styleClass="MasterCheckboxInfo"/>
+                                
+                            
+                        </apex:facet>
+                        
+                        <apex:inputCheckbox value="{!record_row.Checkbox}" onclick="child()" styleClass="ChildCheckboxInfo">
+                            <apex:actionSupport event="onchange" action="{!updateSearchItemsMap}"/>
+                        </apex:inputCheckbox>
+                        
+                    </apex:column>
+                    <apex:column width="20px" headerValue="Action">
+                        <apex:outputLink value="/{!record_row.Record.id}/e?retURL=/apex/{!$CurrentPage.Name}" target="_blank" style="color:blue; font-weight: bold"> 
+                            Edit |
+                        </apex:outputLink>
+                        
+                        <apex:commandLink action="{!Deletes}" reRender="tableBlock"  style="color:blue; font-weight: bold">
+                            Del <apex:param name="id" value="{!record_row.Record.id}" />
+                        </apex:commandLink>
+                    </apex:column>
+                    <apex:repeat value="{!ObjFields}" var="FieldLable" id="repeat" >  
+                        <apex:column width="50">
+                            <apex:facet name="header">
+                                <apex:commandLink value=" {!record_row.Record[FieldLable]} {!$ObjectType[obj].fields[FieldLable].Label}" action="{!toggleSort}" rerender="tableBlock">
+                                    <apex:param name="sortField" value="{!FieldLable}" assignTo="{!sortField}"/>
+                                </apex:commandLink>
+                            </apex:facet>
+                            <apex:outputField value=" {!record_row.Record[FieldLable]}" /> 
+                        </apex:column>
+                    </apex:repeat>
+                </apex:pageBlockTable>
+            </apex:outputPanel>   
+        </apex:pageBlock>
+        <apex:outputPanel id="Buttonssection">
+            <table style="width: 100%"><tr>
+                
+                <td>
+                    <!-- Page X of Y -->
+                    <apex:outputLabel value="PageSize :"/>
+                    <apex:selectList value="{!size}" multiselect="false" size="1" >
+                        <apex:actionSupport event="onchange" action="{!refreshPageSize}" reRender="tableBlock,Buttonssection"/>
+                        <apex:selectOptions value="{!paginationSizeOptions}" />
+                    </apex:selectList>
+                </td>
+                <td align="center">
+                    <apex:outputPanel layout="block">
+                        <apex:commandButton value="First" reRender="tableBlock,Buttonssection" action="{!first}" disabled="{!NOT(ssc.hasPrevious)}" />
+                        <apex:commandButton value="Previous" rerender="tableBlock,Buttonssection" action="{!previous}" disabled="{!NOT(ssc.hasPrevious)}"/>
+                        <apex:commandButton value="Next" rerender="tableBlock,Buttonssection" action="{!next}" disabled="{!NOT(ssc.hasNext)}" />
+                        <apex:commandButton value="Last" rerender="tableBlock,Buttonssection" action="{!last}" disabled="{!NOT(ssc.hasNext)}" />
+                    </apex:outputPanel>
+                </td>
+                <td align="right">
+                    Jump Page No.<apex:inputText value="{!PageNum}" style="width:20px">
+                        <apex:actionSupport event="" action="{!frpageNumber}" reRender="tableBlock,Buttonssection" />
+                          </apex:inputText>
+                 
+                    Page No. <apex:outputText value="{!ssc.PageNumber}" /> &nbsp; of &nbsp; <apex:outputText value="{!TotalPages}"/> <!-- in intputText value = ssc.pageNumber-->
+                    
+                </td>
+                
+                </tr></table>
+        </apex:outputPanel>
+    </apex:form>
+    
+    
+    <script>
+  
+    function master(){
+          var masterInputValue = document.getElementsByClassName("MasterCheckboxInfo");//[0].checked;
+          var childInputValue = document.getElementsByClassName("ChildCheckboxInfo");
+        console.log('hello form master funtion');
+        
+        console.log('masterInputValue   :'+masterInputValue[0].checked);   
+        console.log('childInputValue    :'+childInputValue);  
+        if(masterInputValue[0].checked == true){
+            let i;
+            for(i=0; i<childInputValue.length; i++){
+                childInputValue[i].checked = true;
+            }   
+        }
+         if(masterInputValue[0].checked == false){
+            let i;
+            for(i=0; i<childInputValue.length; i++){
+                childInputValue[i].checked = false;
+            }   
+        }
+    }
+    
+     function child(){
+       console.log('hello from child methord');
+        var masterInputValue1 = document.getElementsByClassName("MasterCheckboxInfo");
+        var childInputValue1 = document.getElementsByClassName("ChildCheckboxInfo");
+         
+        var temp =0;
+        for(let j=0; j<childInputValue1.length; j++){
+            if(childInputValue1[i].checked == false){
+                masterInputValue1[0] = false;
+            }
+        }
+     }
+    
+    
+    </script>  
+</apex:component>

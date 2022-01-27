@@ -1,0 +1,156 @@
+public class VFPageController {
+    Map<String, Schema.SObjectType> objmap;//Store object map.
+    public List<SelectOption> options{get;set;}//all object option  list.
+    public  String selectedObject{get;set;}
+    
+    // ========== standard set controller supported standard object list retrive from custom component.
+    public List<String> objectlist; 
+    
+    //============== received multiple selected field  values into the selectedFields;
+    public List<String> SeletedFields{get;set;}  //==> Do not need for initialize. but you want initailize ==> initialize into the SelectedFields.
+    
+    
+    // Store all object fields vaues into the all object list.
+    public List<SelectOption> allFields{get;set;}
+    
+    // Store selectedfields into the selectedfields getter setter type variable.
+    public List<String> selectedfields{get;set;}
+    
+    // Store right multiselect picklist selected values  its values remove rightside & add into left side. 
+    public List<String> removefields{get;set;}
+    
+    //================Describe selected object fieldmap 
+    public Map<String, Schema.SObjectField> fieldmap;
+    
+    // ===================Store fields on right side multiselect picklist.
+    public List<SelectOption> rightOptions{get;set;}
+    
+    // ====================== store selected options values from right side multiselect picklist;
+    public List<String> secondselectedFields{get;set;}   //==> Do not need for initialize. but you want initailize ==> initialize into the SelectedFields.
+    
+    // api name string type list of all left side fields.
+    public List<String> rightsidefieldsApiName{get;set;}
+    
+    // ============================= Call constructor when page load and get object name list.
+    
+    public  VFPageController(){
+        objectlist = new List<String>();
+        options = new List<Selectoption>();
+        String str = System.Label.Supported_Objects;
+        objectlist = str.split(',');
+        objmap = Schema.getGlobalDescribe();
+        options.add(new SelectOption('-None-','-None-'));
+        for(Schema.SObjectType thisObj : objmap.values()) {
+            Schema.DescribeSObjectResult dsr = thisObj.getDescribe();
+            if(objectlist.contains(dsr.getLabel()) || dsr.getName().endsWith('__c')){
+                options.add(new SelectOption((dsr.getName()),(dsr.getLabel())));
+            }
+        }
+        options.sort();
+        // ===========initialize all lists.
+        allFields = new List<SelectOption>();
+        allFields.add(new SelectOption('-None-','-None-', true));
+        rightOptions = new List<SelectOption>();
+        rightOptions.add(new SelectOption('-None-','-None-', true));
+        
+        /////=========================
+        rightsidefieldsApiName = new  List<String>();      // right side box fields api name list. 
+    }
+    
+    // ======================== Reset the all page.
+    
+    public PageReference reset() {
+        PageReference newpage = new PageReference(System.currentPageReference().getURL());
+        newpage.setRedirect(true);
+        return newpage;
+    }  
+    
+    // Spine
+    
+    // ==========================  get all object field into the left multiselect picklist.
+    
+    public void FieldOptions(){
+        allFields.clear();
+        rightOptions.clear();
+        rightsidefieldsApiName.clear();
+        if(selectedObject != null && selectedObject != '-None-') {
+            fieldMap = Schema.getGlobalDescribe().get(selectedObject).getDescribe().fields.getMap();
+            
+            for(Schema.sObjectField sField:  fieldMap.values()){
+                Schema.DescribeFieldResult res = sField.getDescribe();
+                if(res.isUpdateable() && res.isAccessible() && res.isSortable() ){                //================== field filter && res.isQueryable()
+                    allFields.add(new SelectOption(res.getName(), res.getLabel()));
+                }
+            }
+        }
+        allFields.sort();
+    }
+    
+    
+  
+    
+    
+    //========================== Calling the add method to add values leftpicklist to rightpicklist picklist.
+    
+    public void add(){
+        if(SeletedFields != null){
+            for(String ss : SeletedFields){
+                Schema.DescribeFieldResult fieldRes = fieldMap.get(ss).getDescribe();             
+                rightOptions.add(new SelectOption(String.valueOf(fieldRes.getName()),String.valueOf(fieldRes.getLabel())));
+                rightsidefieldsApiName.add(String.valueOf(fieldRes.getName()));
+                //======================= right side box fields api name list. 
+                rightOptions.sort(); 
+                for(integer i=0; i<allFields.size(); i++){
+                    if(allFields[i].getValue() == ss){
+                        allFields.remove(i);
+                    }
+                }
+            }
+            System.debug(allFields);
+            SeletedFields.clear();
+        }
+    }
+    
+    
+   /*  
+    * 
+    * // ====== add disable method
+        public Boolean getaddDisable(){
+        if(seletedFields.size() >0 ){
+            return true;
+        }
+        else{
+            return false;
+        }
+    }      */
+    
+    //============================= remove fields rightside picklist & add into the left side picklist.
+    
+    
+    public void removes(){
+        if(secondselectedFields != null){
+            for(String ss : secondSelectedFields){
+                Schema.DescribeFieldResult fieldRes1 = fieldMap.get(ss).getDescribe();
+                allfields.add(new SelectOption(String.valueOf(fieldRes1.getName()),String.valueOf(fieldRes1.getLabel())));               
+                allfields.sort();
+                for(integer i=0; i<rightOptions.size(); i++){
+                    if(rightOptions[i].getValue() == ss){
+                        rightOptions.remove(i);
+                        rightsidefieldsApiName.remove(i);
+                        i--;
+                    }
+                }
+            }
+            secondselectedFields.clear();
+        }
+    }
+    
+    
+    public  void process(){
+        
+        System.debug('selectedObject  : '+selectedObject);
+        System.debug('rightOptions  :'+rightOptions);
+        System.debug('rightsidefieldsApiName :' + rightsidefieldsApiName);
+    }
+    
+}
